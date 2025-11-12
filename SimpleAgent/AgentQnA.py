@@ -27,12 +27,13 @@ class GeneralAgent:
                 "Jika pertanyaannya umum, beri jawaban ringkas tapi informatif.",
                 "Jika pertanyaannya teknis, berikan langkah atau penjelasan singkat."
             ],
-            output_schema=AnswerSchema
+            output_schema=AnswerSchema,
+            use_json_mode=True
         )
     
     def run(self, question: str):
         result = self.agent_general.run(question)
-        return result.content
+        return result.content.model_dump()
     
 if __name__=="__main__":
     agent=GeneralAgent()
