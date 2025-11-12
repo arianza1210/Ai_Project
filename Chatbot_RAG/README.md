@@ -69,7 +69,7 @@ data = Dataset.from_dict({
 1. create environment python
 2. open repository
 ``` bash
-cd chatbot_layanan_uns
+cd Chatbot_RAG
 pip install -r requirements.txt
 ```
 3. cara run
