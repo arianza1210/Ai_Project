@@ -31,28 +31,32 @@ class BaseLocationAgent:
                 - Kembalikan hasil pencarian mentah & link sumber
                 Format jawaban:
                 - Bullet points
-                - Sertakan link sumber"""
+                - Sertakan link sumber. **JANGAN gunakan format [teks](link), gunakan link URL mentah.**"""
             ),
             markdown=True,
         )
 
         self.agent_fact = Agent(
-            name="Agent Fact",
-            model=Groq(id="meta-llama/llama-4-scout-17b-16e-instruct", api_key=API_KEY),
-            instructions=dedent(
-                """
-        Kamu adalah analis fakta.
-        Tugas:
-        - Gabungkan hasil pencarian
-        - Verifikasi kecocokan antar sumber
-        - Tandai jika ada informasi yang bertentangan
-        - Hanya ambil fakta yang konsisten
-        Output:
-        - Fakta utama (bullet points)
-        - Kesimpulan verifikasi"""
-            ),
-            markdown=True,
-        )
+                name="Agent Fact",
+                model=Groq(id="meta-llama/llama-4-scout-17b-16e-instruct", api_key=API_KEY),
+                instructions=dedent(
+                    """
+            Kamu adalah analis fakta.
+            Tugas:
+            - Gabungkan hasil pencarian
+            - Verifikasi kecocokan antar sumber
+            - Tandai jika ada informasi yang bertentangan
+            - Hanya ambil fakta yang konsisten
+            
+            Output:
+            - **Formatkan output kamu sebagai TEXT BIASA (non-JSON, non-function call)**
+            - **Bagian 1:** Fakta utama (gunakan bullet points).
+            - **Bagian 2:** Kesimpulan verifikasi (1-2 kalimat deskriptif).
+            """
+                ),
+                markdown=True,
+            )
+        
         self.lead_team_agent = Team(
             members=[self.agent_search, self.agent_fact],
             model=Groq(id="meta-llama/llama-4-scout-17b-16e-instruct", api_key=API_KEY),
@@ -66,7 +70,7 @@ class BaseLocationAgent:
         Format:
         - Jawaban utama (1–3 kalimat)
         - Fakta pendukung (bullet points)
-        - Sumber (link)
+        - Sumber (link URL mentah, **JANGAN gunakan format Markdown [teks](link)**)
     """
             ),
             show_members_responses=False,
@@ -80,5 +84,5 @@ class BaseLocationAgent:
     
 if __name__=="__main__":
     agent=BaseLocationAgent()
-    result= agent.run("bayangkara fc stadion utamanya dimana?")
+    result= agent.run("kandang persija jakarta dimana?")
     print(result)
