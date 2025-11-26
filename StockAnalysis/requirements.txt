@@ -1,0 +1,5 @@
+agno==2.2.11
+ddgs==9.9.1
+fastapi==0.121.3
+uvicorn==0.38.0
+yfinance==0.2.66
