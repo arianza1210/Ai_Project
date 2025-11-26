@@ -24,7 +24,7 @@ class StockAnalysisRequest(BaseModel):
 # Response Model
 class StockAnalysisResponse(BaseModel):
     status: str
-    data: dict
+    data: str
 
 # Dependency untuk verify API key
 def verify_api_key(credentials: HTTPAuthorizationCredentials = Depends(security)):
