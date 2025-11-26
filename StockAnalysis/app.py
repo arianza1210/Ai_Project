@@ -7,7 +7,7 @@ import sys, os
 # ===== IMPORT AGENT (Assumes agent module is available) =====
 # Pastikan modul 'agent.test' tersedia di lingkungan Anda
 try:
-    from agent.test import StockFundamentalAgent
+    from agent.Agent_StockAnalysis   import StockFundamentalAgent
 except ImportError:
     st.error("❌ Modul 'agent.test.StockFundamentalAgent' tidak ditemukan. Pastikan path impor sudah benar.")
     class StockFundamentalAgent:
