@@ -1,54 +1,105 @@
-#runing uvicorn command: uvicorn services:app --host 0.0.0.0 --port {your_port}
-
-
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Header, Depends
 from fastapi.middleware.cors import CORSMiddleware
-import os , sys
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from pydantic import BaseModel
+import os
 
-# backend_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-# sys.path.append(backend_path)
 from agent.Agent_StockAnalysis import StockFundamentalAgent
 
 app = FastAPI(title="Stock Analysis Service", version="1.0.0")
-# origins = [
-#     "http://localhost:3000",
-#     "http://127.0.0.1:3000",
-#     "http://localhost:3001",
-#     "http://127.0.0.1:3001",
-#     "http://localhost:3002",
-#     "http://127.0.0.1:3002",
-#     "http://localhost:8000",
-#     "http://127.0.0.1:8000",
-# ]
-
-# app.add_middleware(
-#     CORSMiddleware,
-#     allow_origins=origins,
-#     allow_credentials=True,
-#     allow_methods=["*"],
-#     allow_headers=["*"],
-#     expose_headers=["*"]
-# )
+security = HTTPBearer()
 
 
-#global instance of stock agent
-stock_agent = StockFundamentalAgent()
-
-@app.get("/",tags=["Analysis Service"])
-def read_root():
-    return {"message": "Stock Analysis Service is running."}
-
-
-@app.post("/analyze_stock/", tags=["Analysis Service"])
-def analyze_stock(input_text: str):
-    try:
-        analyst= stock_agent.run(input_text)
-        result={
-            "status": "success",
-            "data": analyst
+# Request Model
+class StockAnalysisRequest(BaseModel):
+    input_text: str
+    
+    class Config:
+        json_schema_extra = {   
+            "example": {
+                "input_text": "Analyze AAPL stock fundamentals"
+            }
         }
-        return result
+
+# Response Model
+class StockAnalysisResponse(BaseModel):
+    status: str
+    data: dict
+
+# Dependency untuk verify API key
+def verify_api_key(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """
+    Verify Groq API key from Authorization header
+    Expected format: Bearer gsk_xxxxxxxxxxxxx
+    """
+    api_key = credentials.credentials
+    
+    # Validasi format API key (Groq keys start with 'gsk_')
+    if not api_key.startswith('gsk_'):
+        raise HTTPException(
+            status_code=401, 
+            detail="Invalid API key format. Groq API keys should start with 'gsk_'"
+        )
+    
+    return api_key
+
+@app.get("/", tags=["Health Check"])
+def read_root():
+    """Health check endpoint"""
+    return {
+        "message": "Stock Analysis Service is running",
+        "version": "1.0.0",
+        "status": "healthy"
+    }
+
+@app.post(
+    "/analyze_stock/", 
+    tags=["Analysis Service"],
+    response_model=StockAnalysisResponse
+)
+def analyze_stock(
+    request: StockAnalysisRequest,
+    api_key: str = Depends(verify_api_key)
+):
+    """
+    Analyze stock fundamentals using Groq AI
+    
+    **Authorization**: Bearer token required (your Groq API key)
+    
+    **Example**:
+    ```
+    Headers:
+    Authorization: Bearer gsk_your_api_key_here
+    
+    Body:
+    {
+        "input_text": "Analyze Apple stock performance"
+    }
+    ```
+    """
+    try:
+        stock_agent = StockFundamentalAgent(api_key=api_key)
+        analyst = stock_agent.run(request.input_text)
+        
+        return StockAnalysisResponse(
+            status="success",
+            data=analyst
+        )
+    
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=f"Invalid input: {str(ve)}")
+    
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Analysis failed: {str(e)}"
+        )
 
-
+@app.get("/health", tags=["Health Check"])
+def health_check():
+    """Detailed health check"""
+    return {
+        "status": "healthy",
+        "service": "Stock Analysis",
+        "environment": os.getenv("ENVIRONMENT", "production")
+    }
