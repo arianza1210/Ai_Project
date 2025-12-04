@@ -21,17 +21,19 @@ from agent.prompt.prompt import (
     GENERAL_ANALYSIS_PROMPT
 )
 
+DEFAULT_MODEL = "openai/gpt-oss-120b"
 
 class StockFundamentalAgent:
-    def __init__(self, api_key):
+    def __init__(self, api_key, model: str = DEFAULT_MODEL):
         self.API_KEY=api_key
+        self.MODEL= model
         self._init_agent()
         self.extract_yfinance = YFinance()
 
     def _init_agent(self):
         self.extract_saham_agent = Agent(
             name="ExtractSahamAgent",
-            model=Groq(id="openai/gpt-oss-120b", api_key=self.API_KEY),
+            model=Groq(id=self.MODEL, api_key=self.API_KEY),
             system_message="anda adalah asisten yang mengekstrak kode saham dari teks input. jika saham indonesia ditambahkan .JK diakhir (jika belum ada). jika tidak ada saham, kembalikan string kosong output dalam bentuk json dengan format {'symbols': []}",
             output_schema=ListSaham,
             use_json_mode=True,
@@ -39,35 +41,35 @@ class StockFundamentalAgent:
         
         self.technical_analysis_agent = Agent(
             name="TechnicalAnalysisAgent",
-            model=Groq(id="openai/gpt-oss-120b", api_key=self.API_KEY),
+            model=Groq(id=self.MODEL, api_key=self.API_KEY),
             instructions=TECHNICAL_ANALYSIS_PROMPT,
             use_json_mode=False,
         )
         
         self.fundamental_analysis_agent = Agent(
             name="FundamentalAnalysisAgent",
-            model=Groq(id="openai/gpt-oss-120b", api_key=self.API_KEY),
+            model=Groq(id=self.MODEL, api_key=self.API_KEY),
             instructions=FUNDAMENTAL_ANALYSIS_PROMPT,
             use_json_mode=False,
         )
         
         self.trading_recommendation_agent = Agent(
             name="TradingRecommendationAgent",
-            model=Groq(id="openai/gpt-oss-120b", api_key=self.API_KEY),
+            model=Groq(id=self.MODEL, api_key=self.API_KEY),
             instructions=TRADING_RECOMMENDATION_PROMPT,
             use_json_mode=False,
         )
         
         self.market_trend_news_agent = Agent(
             name="MarketTrendNewsAgent",
-            model=Groq(id="openai/gpt-oss-120b", api_key=self.API_KEY),
+            model=Groq(id=self.MODEL, api_key=self.API_KEY),
             tools=[DuckDuckGoTools(timeout=2000, fixed_max_results=5)],
             instructions=MARKET_TREND_NEWS_PROMPT,
             use_json_mode=False,
         )
         self.general_analysis_agent = Agent(
             name="GeneralAnalysisAgent",
-            model=Groq(id="openai/gpt-oss-120b", api_key=self.API_KEY),
+            model=Groq(id=self.MODEL, api_key=self.API_KEY),
             tools=[DuckDuckGoTools(timeout=2000, fixed_max_results=5)],
             instructions=GENERAL_ANALYSIS_PROMPT,
             use_json_mode=False,
@@ -81,7 +83,7 @@ class StockFundamentalAgent:
                 self.market_trend_news_agent,
                 self.general_analysis_agent
             ],
-            model=Groq(id="openai/gpt-oss-120b", api_key=self.API_KEY),
+            model=Groq(id=self.MODEL, api_key=self.API_KEY),
             instructions=dedent("""\
                 Anda adalah Lead Orchestrator Agent yang bertugas menganalisis pertanyaan pengguna dan memilih agent paling relevan untuk kasus saham global. Jika ticker saham mengandung akhiran .JK, maka rute analisis harus diarahkan ke IDX (Bursa Efek Indonesia). Jika tidak, gunakan agent saham global.
                 
