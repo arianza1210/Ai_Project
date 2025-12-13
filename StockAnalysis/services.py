@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Header, Depends
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
@@ -6,56 +6,82 @@ import os
 
 from agent.Agent_StockAnalysis import StockFundamentalAgent
 
-app = FastAPI(title="Stock Analysis Service", version="1.0.0")
+# =========================
+# App & Security
+# =========================
+app = FastAPI(
+    title="Stock Analysis Service",
+    version="1.0.0"
+)
+
 security = HTTPBearer()
 
+# =========================
+# CORS (optional)
+# =========================
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-# Request Model
+# =========================
+# Models
+# =========================
 class StockAnalysisRequest(BaseModel):
     input_text: str
-    
+
     class Config:
-        json_schema_extra = {   
+        json_schema_extra = {
             "example": {
                 "input_text": "Analyze AAPL stock fundamentals"
             }
         }
 
-# Response Model
+
 class StockAnalysisResponse(BaseModel):
     status: str
     data: str
 
-# Dependency untuk verify API key
-def verify_api_key(credentials: HTTPAuthorizationCredentials = Depends(security)):
+
+# =========================
+# Auth Dependency
+# =========================
+def verify_api_key(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
     """
-    Verify Groq API key from Authorization header
-    Expected format: Bearer gsk_xxxxxxxxxxxxx
+    Authorization: Bearer gsk_xxxxx
     """
     api_key = credentials.credentials
-    
-    # Validasi format API key (Groq keys start with 'gsk_')
-    if not api_key.startswith('gsk_'):
+
+    if not api_key.startswith("gsk_"):
         raise HTTPException(
-            status_code=401, 
-            detail="Invalid API key format. Groq API keys should start with 'gsk_'"
+            status_code=401,
+            detail="Invalid API key format"
         )
-    
+
     return api_key
 
+
+# =========================
+# Routes
+# =========================
 @app.get("/", tags=["Health Check"])
-def read_root():
-    """Health check endpoint"""
+def root():
     return {
         "message": "Stock Analysis Service is running",
-        "version": "1.0.0",
-        "status": "healthy"
+        "status": "healthy",
+        "version": "1.0.0"
     }
 
+
 @app.post(
-    "/analyze_stock/", 
-    tags=["Analysis Service"],
-    response_model=StockAnalysisResponse
+    "/analyze_stock",
+    response_model=StockAnalysisResponse,
+    tags=["Analysis Service"]
 )
 def analyze_stock(
     request: StockAnalysisRequest,
@@ -63,41 +89,34 @@ def analyze_stock(
 ):
     """
     Analyze stock fundamentals using Groq AI
-    
-    **Authorization**: Bearer token required (your Groq API key)
-    
-    **Example**:
-    ```
-    Headers:
-    Authorization: Bearer gsk_your_api_key_here
-    
-    Body:
-    {
-        "input_text": "Analyze Apple stock performance"
-    }
-    ```
+
+    Authorization:
+    Bearer gsk_xxxxxxxxxx
     """
     try:
-        stock_agent = StockFundamentalAgent(api_key=api_key)
-        analyst = stock_agent.run(request.input_text)
-        
+        agent = StockFundamentalAgent(api_key=api_key)
+        result = agent.run(request.input_text)
+
         return StockAnalysisResponse(
             status="success",
-            data=analyst
+            data=result
         )
-    
-    except ValueError as ve:
-        raise HTTPException(status_code=400, detail=f"Invalid input: {str(ve)}")
-    
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400,
+            detail=str(e)
+        )
+
     except Exception as e:
         raise HTTPException(
-            status_code=500, 
+            status_code=500,
             detail=f"Analysis failed: {str(e)}"
         )
 
+
 @app.get("/health", tags=["Health Check"])
-def health_check():
-    """Detailed health check"""
+def health():
     return {
         "status": "healthy",
         "service": "Stock Analysis",
